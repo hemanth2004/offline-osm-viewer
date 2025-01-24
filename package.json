@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "json-formatter-js": "^2.5.18",
     "maplibre-gl": "^5.0.1",
     "pmtiles": "^4.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-json-view-lite": "^2.3.0",
     "react-maplibre": "^1.0.0"
   },
   "devDependencies": {

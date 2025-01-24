@@ -1,17 +1,17 @@
 :root {
   /* Base colors */
-  --color-background: #f0f0f0;
+  --color-background: #fcfcfc;
   --color-text: #000000;
   --color-text-secondary: #3b3b3b;
   --color-text-halo: #ffffff;
 
   /* Natural features */
   --color-water: #a0d0c0;
-  --color-grass: #c4e4a3;
-  --color-wood: #72d158;
+  --color-grass: #d1e2bf;
+  --color-wood: #95c587;
   --color-forest: #2e8b57;
   --color-park: #98fb98;
-  --color-landcover-default: #efefef;
+  --color-landcover-default: #f4ebeb;
 
   /* Built environment */
   --color-building: #c0c0c0;
@@ -23,6 +23,10 @@
   --color-trunk: #999999;
   --color-primary: #a4a4a4;
   --color-secondary: #deb887;
+
+  --color-water-text: #4a90e2;
+  --color-mountain-text: #72583d;
+  --color-park: #c8facc;
 }
 
 /* Map container styles */

@@ -1,32 +1,37 @@
-:root {
-    font-family: monospace;
-    line-height: 1.5;
-    font-weight: 400;
+@font-face {
+    font-family: 'Poppins';
+    src: url('/Poppins/Poppins-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
 
-    color-scheme: light dark;
-    color: rgba(49, 49, 49, 0.87);
-    background-color: #d1d1d1;
+@font-face {
+    font-family: 'Poppins';
+    src: url('/Poppins/Poppins-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
 
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+/* Apply the font to everything */
+* {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
 .app {
-    font-family: monospace;
     display: flex;
     margin: 0 auto;
     align-items: center;
 }
 
-header {
-    display: flex;
-    padding: 10px;
-    height: 100vh;
-    width: 30%;
-    max-width: 400px;
+:root {
+    /* ... existing variables ... */
 
-    border-right: 3px solid #919191;
-    box-sizing: border-box;
+    /* New variables for the added layers */
+    --color-water-text: #4a90e2;
+    --color-mountain-text: #72583d;
+    --color-park: #c8facc;
+
+    /* ... rest of your variables ... */
 }
