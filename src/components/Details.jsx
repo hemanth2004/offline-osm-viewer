@@ -6,6 +6,7 @@ function Details({
     filePath,
     mapDetails,
     liveDetails,
+    setIsOpen,
     setSearchQuery,
     latestSearchResult
 }) {
@@ -40,8 +41,11 @@ function Details({
                     </div>
                 )}
             </div>
+            <button className='det-btn' onClick={() => setIsOpen(true)}>How to use</button>
+
             <div className='det-search-container'>
                 <textarea
+                    spellCheck="false"
                     ref={searchInputRef}
                     className="det-search"
                     placeholder='Search places'
@@ -80,6 +84,7 @@ Details.propTypes = {
     mapDetails: PropTypes.object,
     liveDetails: PropTypes.object,
     setSearchQuery: PropTypes.func.isRequired,
+    setIsOpen: PropTypes.func.isRequired,
     latestSearchResult: PropTypes.shape({
         found: PropTypes.bool,
         location: PropTypes.shape({

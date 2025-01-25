@@ -1,5 +1,6 @@
 import { Map } from './components/Map';
 import Details from './components/Details';
+import About from './components/About';
 import './styles.css'
 import { useState } from 'react';
 
@@ -17,6 +18,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("")
   const [latestSearchResult, setLatestSearchResult] = useState({})
 
+  const [isOpen, setIsOpen] = useState(true)
 
   const reportMapDetails = (mapDetails) => {
     console.log(mapDetails)
@@ -35,6 +37,7 @@ function App() {
         liveDetails={liveDetails}
         setSearchQuery={setSearchQuery}
         latestSearchResult={latestSearchResult}
+        setIsOpen={setIsOpen}
       />
 
       <Map
@@ -43,6 +46,11 @@ function App() {
         reportLive={reportLive}
         searchQuery={searchQuery}
         reportSearch={setLatestSearchResult}
+      />
+
+      <About
+        isOpen={isOpen}
+        setIsOpen={() => setIsOpen(false)}
       />
 
     </div>

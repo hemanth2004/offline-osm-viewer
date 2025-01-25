@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
+import ini from 'ini';
 import './MapStyles.css'
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -13,8 +14,21 @@ export const Map = ({
 }) => {
     const [mapDetails, setMapDetails] = useState({});
     const [mapCenter, setMapCenter] = useState([]);
+    const [config, setConfig] = useState(null);
     const mapContainer = useRef(null);
     const mapRef = useRef(null);  // Store map reference
+
+    // Load config.ini at component mount
+    useEffect(() => {
+        fetch('./config.ini')
+            .then(response => response.text())
+            .then(data => {
+                const parsedConfig = ini.parse(data);
+                console.log('Parsed INI config:', parsedConfig);
+                setConfig(parsedConfig);
+            })
+            .catch(error => console.error('Error loading config:', error));
+    }, []);
 
     useEffect(() => {
         if (mapRef.current) return; // Don't reinitialize if map exists
@@ -309,7 +323,7 @@ export const Map = ({
 
     // New effect for handling search
     useEffect(() => {
-        if (!mapRef.current || !searchQuery || !reportSearch) return;
+        if (!mapRef.current || !searchQuery || !reportSearch || !config) return;
 
         // Remove leading '>' characters from the search query
         searchQuery = searchQuery.trim().replace(/^>+/, '')
@@ -394,31 +408,14 @@ export const Map = ({
                             return;
                         }
 
-                        console.log(`Using coordinates [${coordinates}] for feature type ${feature.geometry.type}`);
+                        //console.log(`Using coordinates [${coordinates}] for feature type ${feature.geometry.type}`);
 
-                        // Determine zoom level
-                        let zoom;
-                        if (foundLayer === 'place') {
-                            if (feature.properties.class === 'city') zoom = 12;
-                            else if (feature.properties.class === 'country') zoom = 5;
-                            else if (feature.properties.class === 'state') zoom = 6;
-                            else if (feature.properties.class === 'town') zoom = 12;
-                            else if (feature.properties.class === 'village') zoom = 14;
-                            else if (feature.properties.class === 'suburb') zoom = 14;
-                            else if (feature.properties.class === 'neighbourhood') zoom = 15;
-                            else if (feature.properties.class === 'quarter') zoom = 15;
-                            else if (feature.properties.class === 'district') zoom = 14;
-                        }
-                        else if (foundLayer === 'address') zoom = 16;
-                        else if (foundLayer === 'landuse') zoom = 15;
-                        else if (foundLayer === 'poi') zoom = 16;
-                        else if (foundLayer === 'transportation_name') zoom = 15;
-                        else if (foundLayer === 'water_name') zoom = 13;
-                        else if (foundLayer === 'mountain_peak') zoom = 14;
-                        else if (foundLayer === 'park') zoom = 14;
-                        else zoom = 15;
+                        // Determine zoom level using config
+                        let zoom = getZoomLevel(foundLayer, feature.properties.class);
 
-                        // Fly to the location
+                        console.log("Zoom level:", zoom);
+
+                        // Fly to the location with configured zoom
                         map.flyTo({
                             center: coordinates,
                             zoom: zoom,
@@ -501,9 +498,7 @@ export const Map = ({
             performSearch();
         });
 
-    }, [searchQuery]); // Only depend on searchQuery
-
-
+    }, [searchQuery, config]); // Add config to dependencies
 
     const handleSetCenter = () => {
         const currentViewCoordinates = mapRef.current.getCenter().toArray();
@@ -520,6 +515,32 @@ export const Map = ({
         const center = mapRef.current.getCenter();
         return `[${center.lng.toFixed(4)}, ${center.lat.toFixed(4)}]`;
     }
+
+    // In your search functionality, replace hardcoded zoom levels with config values
+    const getZoomLevel = (layer, featureClass) => {
+        if (!config) {
+            console.log('Config not loaded yet');
+            return 15;
+        }
+
+        console.log('Looking up zoom for:', { layer, featureClass });
+
+        if (layer === 'place' && config.place && config.place[featureClass]) {
+            const zoom = parseFloat(config.place[featureClass]);
+            console.log(`Found place zoom level: ${zoom}`);
+            return zoom;
+        }
+
+        if (config.layers && config.layers[layer]) {
+            const zoom = parseFloat(config.layers[layer]);
+            console.log(`Found layer zoom level: ${zoom}`);
+            return zoom;
+        }
+
+        const defaultZoom = parseFloat(config.default.zoom) || 15;
+        console.log(`Using default zoom: ${defaultZoom}`);
+        return defaultZoom;
+    };
 
     return (
         <>
