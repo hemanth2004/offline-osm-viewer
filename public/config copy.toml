@@ -1,0 +1,42 @@
+# Place class zoom levels
+[place]
+city = 11.5
+country = 5
+state = 6
+town = 12
+village = 14
+suburb = 14
+neighbourhood = 15
+quarter = 15
+district = 14
+
+# Other layer zoom levels
+[layers]
+address = 16
+landuse = 15
+poi = 16
+transportation_name = 15
+water_name = 13
+mountain_peak = 14
+park = 14
+
+[default]
+zoom = 15
+
+# Search center configuration
+[search_center]
+use_this = true  # true-set the following as search center on load, false-auto calculate search center
+write_to_this = true  # true-write to this config file when custom search center is set, false-dont
+
+# center for each map ever used
+[[search_center.perMap]]
+fileName = "india.pmtiles"
+latitude = 20.7128
+longitude = 77.1629
+zoom = 5
+
+[[search_center.perMap]]
+fileName = "malaysia-singapore-brunei.pmtiles"
+latitude = 20.7128
+longitude = 77.1629
+zoom = 15

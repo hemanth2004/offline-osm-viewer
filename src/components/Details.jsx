@@ -1,6 +1,7 @@
 import './Details.css'
 import { useRef } from 'react';
 import PropTypes from 'prop-types';
+import { CodeBlock } from 'react-code-blocks';
 
 function Details({
     filePath,
@@ -26,23 +27,65 @@ function Details({
         return filePath.split('.').pop();
     }
 
+    const generateSearchCenterCode = () => {
+        const center = [mapDetails.center[1], mapDetails.center[0]];
+        const code = `[[search_center.perMap]]\nfileName = "${getFileName(filePath)}.${getFileExtension(filePath)}"\nlatitude = ${center[0]}\nlongitude = ${center[1]}\nzoom = ${mapDetails.zoom}`
+        return code;
+    }
+
+    const copySearchCenter = () => {
+        const code = generateSearchCenterCode();
+        navigator.clipboard.writeText(code);
+        return code;
+    }
+
     return (
         <div className="map-details">
             <div className="det-header">
                 <h2>{getFileName(filePath)}.<span className='det-file-ext'>{getFileExtension(filePath)}</span></h2>
                 {mapDetails && mapDetails.header && mapDetails.metadata && (
                     <div className="map-stats">
-                        <p>CENTER @ {mapDetails.header.centerLat.toFixed(2)}°N, {mapDetails.header.centerLon.toFixed(2)}°E</p>
-                        <p>LAYERS {mapDetails.metadata.vector_layers?.length || 0}</p>
-                        <ul>COVERAGE
-                            <li>[↑] {mapDetails.header.minLat.toFixed(2)}°N to {mapDetails.header.maxLat.toFixed(2)}°N</li>
-                            <li>[→] {mapDetails.header.minLon.toFixed(2)}°E to {mapDetails.header.maxLon.toFixed(2)}°E</li>
-                        </ul>
+                        <div className='map-stats-static'>
+                            <div className='map-stats-static-left'>
+                                <p>CENTER @ {
+                                    mapDetails.center ? mapDetails.center[1] : mapDetails.header.centerLon
+                                }°N, {
+                                        mapDetails.center ? mapDetails.center[0] : mapDetails.header.centerLat
+                                    }°E</p>
+                                <p>ZOOM {mapDetails.zoom}x</p>
+                                <p>LAYERS {mapDetails.metadata.vector_layers?.length || 0}</p>
+                                <ul>COVERAGE
+                                    <li>[↑] {mapDetails.header.minLat.toFixed(2)}°N to {mapDetails.header.maxLat.toFixed(2)}°N</li>
+                                    <li>[→] {mapDetails.header.minLon.toFixed(2)}°E to {mapDetails.header.maxLon.toFixed(2)}°E</li>
+                                </ul>
+                            </div>
+                            <div className='map-stats-static-right'>
+                                <button className='map-stats-static-right-btn' onClick={copySearchCenter}>
+                                    COPY
+                                </button>
+                                <div className='map-stats-static-right-copy'>
+                                    <CodeBlock
+                                        text={generateSearchCenterCode()}
+                                        language="cpp"
+                                        showLineNumbers={true}
+                                        wrapLines
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        {liveDetails &&
+                            <div className='det-live'>
+                                <p>LIVE</p>
+                                <span>{liveDetails?.lngLat?.lng}°E, {liveDetails?.lngLat?.lat}°N</span><br />
+                                <span>Zoom: {liveDetails?.zoom}x</span>
+                            </div>
+                        }
                     </div>
+
                 )}
             </div>
-            <button className='det-btn' onClick={() => setIsOpen(true)}>How to use</button>
-
+            <button className='det-btn det-btn-thin' onClick={() => setIsOpen(true)}>How to use</button>
+            <hr />
             <div className='det-search-container'>
                 <textarea
                     spellCheck="false"
@@ -75,7 +118,7 @@ function Details({
                     }
                 </div>
             </div>
-        </div>
+        </div >
     )
 }
 

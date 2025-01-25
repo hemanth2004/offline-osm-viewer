@@ -4,7 +4,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 72vw;
+    width: 80vw;
     height: 75vh;
     background-color: rgb(239, 239, 239);
     border-radius: 10px;
@@ -26,7 +26,8 @@
     text-transform: uppercase;
     background-color: #ffffff;
     border-radius: 8px;
-    padding: 10px 20px;
+    padding: 5px 15px;
+    margin-bottom: 10px;
     outline: none;
     border: 1px solid rgb(180, 180, 180);
 }
@@ -86,4 +87,5 @@
 
 .about-active {
     background-color: #dbdcb4;
+    outline: 3px solid #005eff;
 }

@@ -18,15 +18,16 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("")
   const [latestSearchResult, setLatestSearchResult] = useState({})
 
-  const [isOpen, setIsOpen] = useState(true)
+  const [isAboutOpen, setIsAboutOpen] = useState(false)
 
   const reportMapDetails = (mapDetails) => {
     console.log(mapDetails)
     setMapDetails(mapDetails)
   }
   const reportLive = (live) => {
-    console.log(live)
-    setLiveDetails(live)
+    if (live?.lngLat?.lng != liveDetails?.lngLat?.lng || live?.lngLat?.lat != liveDetails?.lngLat?.lat) {
+      setLiveDetails(live)
+    }
   }
 
   return (
@@ -37,20 +38,24 @@ function App() {
         liveDetails={liveDetails}
         setSearchQuery={setSearchQuery}
         latestSearchResult={latestSearchResult}
-        setIsOpen={setIsOpen}
+        setIsOpen={setIsAboutOpen}
       />
 
       <Map
         filePath={filePath}
+        mapDetails={mapDetails}
         reportMapDetails={reportMapDetails}
+
+        liveDetails={liveDetails}
         reportLive={reportLive}
+
         searchQuery={searchQuery}
         reportSearch={setLatestSearchResult}
       />
 
       <About
-        isOpen={isOpen}
-        setIsOpen={() => setIsOpen(false)}
+        isOpen={isAboutOpen}
+        setIsOpen={() => setIsAboutOpen(false)}
       />
 
     </div>

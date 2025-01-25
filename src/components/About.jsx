@@ -11,11 +11,15 @@ function About({ isOpen, setIsOpen }) {
 
     useEffect(() => {
         const loadMarkdownFiles = async () => {
-            // Get all .md files from assets directory
-            const mdFiles = import.meta.glob('/src/assets/*.md', { as: 'raw' });
+            // Get all .md files from both directories
+            const rootMdFiles = import.meta.glob('/public/*.md', { as: 'raw' });
+            const guidesMdFiles = import.meta.glob('/public/Guides/*.md', { as: 'raw' });
+
+            // Combine and process all files
+            const allMdFiles = { ...rootMdFiles, ...guidesMdFiles };
 
             const filesContent = await Promise.all(
-                Object.entries(mdFiles).map(async ([path, loader]) => {
+                Object.entries(allMdFiles).map(async ([path, loader]) => {
                     const content = await loader();
                     const fileName = path.split('/').pop().replace('.md', '');
                     // Remove leading number and any separator (- or _)
@@ -23,16 +27,23 @@ function About({ isOpen, setIsOpen }) {
 
                     return {
                         title: title,
-                        content: content  // Now content is the raw markdown text
+                        content: content
                     };
                 })
             );
 
-            setMarkdownFiles(filesContent);
+            // Sort files by their original filename (which includes the number)
+            const sortedFiles = filesContent.sort((a, b) => {
+                const aNum = parseInt(a.title.match(/^\d+/)?.[0] || '0');
+                const bNum = parseInt(b.title.match(/^\d+/)?.[0] || '0');
+                return aNum - bNum;
+            });
+
+            setMarkdownFiles(sortedFiles);
         };
 
         loadMarkdownFiles();
-        console.log(markdownFiles)
+        console.log(markdownFiles);
     }, []);
 
     return (
@@ -67,17 +78,62 @@ function About({ isOpen, setIsOpen }) {
                                     ul: ({ node, ...props }) => <ul style={{ marginBottom: '1rem', marginLeft: '2rem' }} {...props} />,
                                     ol: ({ node, ...props }) => <ol style={{ marginBottom: '1rem', marginLeft: '2rem' }} {...props} />,
                                     li: ({ node, ...props }) => <li style={{ marginBottom: '0.5rem' }} {...props} />,
-                                    code: ({ node, inline, ...props }) => (
-                                        <code
+                                    blockquote: ({ node, ...props }) => (
+                                        <blockquote
                                             style={{
-                                                background: '#f0f0f0',
-                                                padding: inline ? '0.2rem 0.4rem' : '1rem',
-                                                borderRadius: '4px',
-                                                display: inline ? 'inline' : 'block'
+                                                borderLeft: '4px solid #ccc',
+                                                paddingLeft: '1rem',
+                                                margin: '1rem 0',
+                                                color: '#666'
                                             }}
                                             {...props}
                                         />
-                                    )
+                                    ),
+                                    code: ({ node, inline, className, children, ...props }) => {
+                                        const match = /language-(\w+)/.exec(className || '');
+                                        const language = match ? match[1] : '';
+                                        return !inline ? (
+                                            <div style={{
+                                                background: 'rgba(0,0,0,0.1)',
+                                                padding: '1rem',
+                                                borderRadius: '4px',
+                                                marginBottom: '1rem'
+                                            }}>
+                                                {language && (
+                                                    <div style={{
+                                                        color: '#666',
+                                                        fontSize: '2rem',
+                                                        marginBottom: '0.5rem'
+                                                    }}>
+                                                        {language}
+                                                    </div>
+                                                )}
+                                                <code
+                                                    style={{
+                                                        display: 'block',
+                                                        overflowX: 'auto',
+                                                        fontFamily: 'monospace',
+                                                        fontSize: '0.9rem'
+                                                    }}
+                                                    {...props}
+                                                >
+                                                    {children}
+                                                </code>
+                                            </div>
+                                        ) : (
+                                            <code
+                                                style={{
+                                                    background: '#f0f0f0',
+                                                    padding: '0.2rem 0.4rem',
+                                                    borderRadius: '4px',
+                                                    fontFamily: 'monospace'
+                                                }}
+                                                {...props}
+                                            >
+                                                {children}
+                                            </code>
+                                        );
+                                    }
                                 }}
                             >
                                 {markdownFiles[activeFile].content}

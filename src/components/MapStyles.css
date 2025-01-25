@@ -2,12 +2,23 @@
     position: absolute;
     bottom: 30px;
     right: 0;
-    z-index: 1000;
-    background-color: #86b3ff;
+    z-index: 200;
     cursor: pointer;
-    border-radius: 10px;
-    padding: 10px 20px;
-    margin: 10px;
+
+    font-weight: bold;
+    font-size: 14px;
+    text-transform: uppercase;
+    background-color: #ffffff;
+    margin: 10px 10px;
+    border-radius: 8px;
+    padding: 10px 10px;
     outline: none;
-    border: none;
+    border: 1px solid rgb(180, 180, 180);
+}
+
+.map-btn:hover,
+.map-btn:focus {
+    outline: 3px solid #005eff;
+    background-color: #f4f4f4;
+    cursor: pointer;
 }

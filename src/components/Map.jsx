@@ -1,37 +1,43 @@
+import '../utils/global-polyfill';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
-import ini from 'ini';
+import TOML from '@iarna/toml';
 import './MapStyles.css'
+import maptilerStyles from '../assets/maptilerStyles.js'
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 export const Map = ({
     filePath,
+    mapDetails,
     reportMapDetails,
+    liveDetails,
     reportLive,
     searchQuery,
-    reportSearch
+    reportSearch,
 }) => {
-    const [mapDetails, setMapDetails] = useState({});
-    const [mapCenter, setMapCenter] = useState([]);
     const [config, setConfig] = useState(null);
     const mapContainer = useRef(null);
     const mapRef = useRef(null);  // Store map reference
 
-    // Load config.ini at component mount
+    // Load config.toml at component mount
     useEffect(() => {
-        fetch('./config.ini')
+        fetch('./config.toml')
             .then(response => response.text())
             .then(data => {
-                const parsedConfig = ini.parse(data);
-                console.log('Parsed INI config:', parsedConfig);
-                setConfig(parsedConfig);
+                const parsedConfig = TOML.parse(data);
+                if (parsedConfig?.search_center?.use_this) {
+                    if (parsedConfig) {
+                        setConfig(parsedConfig)
+                    }
+                }
             })
-            .catch(error => console.error('Error loading config:', error));
-    }, []);
+            .catch(error => console.error('Error loading config.toml:', error));
+    }, [filePath]);
 
+    // Initialize map
     useEffect(() => {
-        if (mapRef.current) return; // Don't reinitialize if map exists
+        if (mapRef.current || !mapContainer.current) return; // Don't reinitialize if map exists or container isn't ready
 
         // Get CSS variables
         const style = getComputedStyle(document.documentElement);
@@ -48,13 +54,39 @@ export const Map = ({
         p.getHeader().then((header) => {
             // Set initial map center based on bounds
             let centerThisFrame = [78.9629, 20.5937]
-            if (header.bounds) {
+            let calculateCenterAuto = true
+            console.log(config)
+            // Check if we should use saved search center
+            if (config?.search_center?.use_this) {
+                const fileName = filePath.split('\\').pop().split('/').pop();
+                console.log(fileName)
+                const savedMap = config.search_center.perMap.find(
+                    map => map.fileName === fileName
+                );
+                if (savedMap) {
+                    centerThisFrame = [savedMap.longitude, savedMap.latitude];
+                    calculateCenterAuto = false; // Don't calculate center if we found a saved map
+                }
+            }
+
+            // Only calculate center from bounds if we didn't find a saved center
+            if (calculateCenterAuto && header.bounds) {
                 const centerLng = (header.minLon + header.maxLon) / 2;
                 const centerLat = (header.minLat + header.maxLat) / 2;
                 centerThisFrame = [centerLng, centerLat]
-                setMapCenter(centerThisFrame);
             }
-            console.log("Calculated mapCenter", centerThisFrame)
+
+            let initZoom = 5
+            if (config?.search_center?.use_this) {
+                const fileName = filePath.split('\\').pop().split('/').pop();
+                console.log(fileName)
+                const savedMap = config.search_center.perMap.find(
+                    map => map.fileName === fileName
+                );
+                if (savedMap) {
+                    initZoom = savedMap.zoom
+                }
+            }
 
             // Initialize MapLibre map
             mapRef.current = new maplibregl.Map({
@@ -69,216 +101,217 @@ export const Map = ({
                             attribution: '© OpenStreetMap contributors'
                         }
                     },
-                    layers: [
-                        {
-                            id: 'background',
-                            type: 'background',
-                            paint: {
-                                'background-color': getColor('--color-background')
-                            }
-                        },
-                        {
-                            id: 'landcover',
-                            type: 'fill',
-                            source: 'pmtiles-source',
-                            'source-layer': 'landcover',
-                            paint: {
-                                'fill-color': [
-                                    'match',
-                                    ['get', 'class'],
-                                    'grass', getColor('--color-grass'),
-                                    'wood', getColor('--color-wood'),
-                                    'forest', getColor('--color-forest'),
-                                    'park', getColor('--color-park'),
-                                    getColor('--color-landcover-default')
-                                ]
-                            }
-                        },
-                        {
-                            id: 'waterway',
-                            type: 'line',
-                            source: 'pmtiles-source',
-                            'source-layer': 'waterway',
-                            paint: {
-                                'line-color': getColor('--color-water'),
-                                'line-width': [
-                                    'match',
-                                    ['get', 'class'],
-                                    'river', 1.5,
-                                    1
-                                ]
-                            }
-                        },
-                        {
-                            id: 'water',
-                            type: 'fill',
-                            source: 'pmtiles-source',
-                            'source-layer': 'water',
-                            paint: {
-                                'fill-color': getColor('--color-water')
-                            }
-                        },
-                        {
-                            id: 'boundary',
-                            type: 'line',
-                            source: 'pmtiles-source',
-                            'source-layer': 'boundary',
-                            paint: {
-                                'line-color': getColor('--color-boundary'),
-                                'line-width': [
-                                    'match',
-                                    ['get', 'admin_level'],
-                                    10, 10,
-                                    4, 1.5,
-                                    1
-                                ],
-                                'line-dasharray': [2, 2]
-                            }
-                        },
-                        {
-                            id: 'building',
-                            type: 'fill',
-                            source: 'pmtiles-source',
-                            'source-layer': 'building',
-                            paint: {
-                                'fill-color': getColor('--color-building'),
-                                'fill-outline-color': getColor('--color-building-outline')
-                            }
-                        },
-                        {
-                            id: 'transportation_name',
-                            type: 'symbol',
-                            source: 'pmtiles-source',
-                            'source-layer': 'transportation_name',
-                            layout: {
-                                'text-field': ['get', 'name:latin'],
-                                'text-font': ['Noto Sans Regular'],
-                                'text-size': 12,
-                                'text-anchor': 'center',
-                                'text-offset': [0, 0]
+                    layers:
+                        [
+                            {
+                                id: 'background',
+                                type: 'background',
+                                paint: {
+                                    'background-color': getColor('--color-background')
+                                }
                             },
-                            paint: {
-                                'text-color': getColor('--color-text-secondary'),
-                                'text-halo-color': getColor('--color-text-halo'),
-                                'text-halo-width': 1
-                            }
-                        },
-                        {
-                            id: 'roads',
-                            type: 'line',
-                            source: 'pmtiles-source',
-                            'source-layer': 'transportation',
-                            paint: {
-                                'line-color': [
-                                    'match',
-                                    ['get', 'class'],
-                                    'motorway', getColor('--color-motorway'),
-                                    'trunk', getColor('--color-trunk'),
-                                    'primary', getColor('--color-primary'),
-                                    'secondary', getColor('--color-secondary'),
-                                    getColor('--color-secondary')
-                                ],
-                                'line-width': [
-                                    'match',
-                                    ['get', 'class'],
-                                    'motorway', 4,
-                                    'trunk', 3,
-                                    'primary', 2,
-                                    'secondary', 1.5,
-                                    1
-                                ]
-                            }
-                        },
-                        {
-                            id: 'poi',
-                            type: 'symbol',
-                            source: 'pmtiles-source',
-                            'source-layer': 'poi',
-                            layout: {
-                                'text-field': ['get', 'name:latin'],
-                                'text-font': ['Noto Sans Regular'],
-                                'text-size': 11,
-                                'text-anchor': 'top',
-                                'text-offset': [0, 0.5]
+                            {
+                                id: 'landcover',
+                                type: 'fill',
+                                source: 'pmtiles-source',
+                                'source-layer': 'landcover',
+                                paint: {
+                                    'fill-color': [
+                                        'match',
+                                        ['get', 'class'],
+                                        'grass', getColor('--color-grass'),
+                                        'wood', getColor('--color-wood'),
+                                        'forest', getColor('--color-forest'),
+                                        'park', getColor('--color-park'),
+                                        getColor('--color-landcover-default')
+                                    ]
+                                }
                             },
-                            paint: {
-                                'text-color': getColor('--color-text-secondary'),
-                                'text-halo-color': getColor('--color-text-halo'),
-                                'text-halo-width': 1
-                            }
-                        },
-                        {
-                            id: 'place-labels',
-                            type: 'symbol',
-                            source: 'pmtiles-source',
-                            'source-layer': 'place',
-                            layout: {
-                                'text-field': ['get', 'name:latin'],
-                                'text-font': ['Noto Sans Regular'],
-                                'text-size': [
-                                    'match',
-                                    ['get', 'class'],
-                                    'city', 14,
-                                    'town', 12,
-                                    'village', 11,
-                                    10
-                                ]
+                            {
+                                id: 'waterway',
+                                type: 'line',
+                                source: 'pmtiles-source',
+                                'source-layer': 'waterway',
+                                paint: {
+                                    'line-color': getColor('--color-water'),
+                                    'line-width': [
+                                        'match',
+                                        ['get', 'class'],
+                                        'river', 1.5,
+                                        1
+                                    ]
+                                }
                             },
-                            paint: {
-                                'text-color': getColor('--color-text'),
-                                'text-halo-color': getColor('--color-text-halo'),
-                                'text-halo-width': 2
-                            }
-                        },
-                        {
-                            id: 'water_name',
-                            type: 'symbol',
-                            source: 'pmtiles-source',
-                            'source-layer': 'water_name',
-                            layout: {
-                                'text-field': ['get', 'name:latin'],
-                                'text-font': ['Noto Sans Regular'],
-                                'text-size': 12,
-                                'text-anchor': 'center'
+                            {
+                                id: 'water',
+                                type: 'fill',
+                                source: 'pmtiles-source',
+                                'source-layer': 'water',
+                                paint: {
+                                    'fill-color': getColor('--color-water')
+                                }
                             },
-                            paint: {
-                                'text-color': getColor('--color-water-text'),
-                                'text-halo-color': getColor('--color-text-halo'),
-                                'text-halo-width': 1
-                            }
-                        },
-                        {
-                            id: 'mountain_peak',
-                            type: 'symbol',
-                            source: 'pmtiles-source',
-                            'source-layer': 'mountain_peak',
-                            layout: {
-                                'text-field': ['get', 'name:latin'],
-                                'text-font': ['Noto Sans Regular'],
-                                'text-size': 11,
-                                'text-anchor': 'top',
-                                'text-offset': [0, 0.5]
+                            {
+                                id: 'boundary',
+                                type: 'line',
+                                source: 'pmtiles-source',
+                                'source-layer': 'boundary',
+                                paint: {
+                                    'line-color': getColor('--color-boundary'),
+                                    'line-width': [
+                                        'match',
+                                        ['get', 'admin_level'],
+                                        10, 10,
+                                        4, 1.5,
+                                        1
+                                    ],
+                                    'line-dasharray': [2, 2]
+                                }
                             },
-                            paint: {
-                                'text-color': getColor('--color-mountain-text'),
-                                'text-halo-color': getColor('--color-text-halo'),
-                                'text-halo-width': 1
+                            {
+                                id: 'building',
+                                type: 'fill',
+                                source: 'pmtiles-source',
+                                'source-layer': 'building',
+                                paint: {
+                                    'fill-color': getColor('--color-building'),
+                                    'fill-outline-color': getColor('--color-building-outline')
+                                }
+                            },
+                            {
+                                id: 'transportation_name',
+                                type: 'symbol',
+                                source: 'pmtiles-source',
+                                'source-layer': 'transportation_name',
+                                layout: {
+                                    'text-field': ['get', 'name:latin'],
+                                    'text-font': ['Noto Sans Regular'],
+                                    'text-size': 12,
+                                    'text-anchor': 'center',
+                                    'text-offset': [0, 0]
+                                },
+                                paint: {
+                                    'text-color': getColor('--color-text-secondary'),
+                                    'text-halo-color': getColor('--color-text-halo'),
+                                    'text-halo-width': 1
+                                }
+                            },
+                            {
+                                id: 'roads',
+                                type: 'line',
+                                source: 'pmtiles-source',
+                                'source-layer': 'transportation',
+                                paint: {
+                                    'line-color': [
+                                        'match',
+                                        ['get', 'class'],
+                                        'motorway', getColor('--color-motorway'),
+                                        'trunk', getColor('--color-trunk'),
+                                        'primary', getColor('--color-primary'),
+                                        'secondary', getColor('--color-secondary'),
+                                        getColor('--color-secondary')
+                                    ],
+                                    'line-width': [
+                                        'match',
+                                        ['get', 'class'],
+                                        'motorway', 4,
+                                        'trunk', 3,
+                                        'primary', 2,
+                                        'secondary', 1.5,
+                                        1
+                                    ]
+                                }
+                            },
+                            {
+                                id: 'poi',
+                                type: 'symbol',
+                                source: 'pmtiles-source',
+                                'source-layer': 'poi',
+                                layout: {
+                                    'text-field': ['get', 'name:latin'],
+                                    'text-font': ['Noto Sans Regular'],
+                                    'text-size': 11,
+                                    'text-anchor': 'top',
+                                    'text-offset': [0, 0.5]
+                                },
+                                paint: {
+                                    'text-color': getColor('--color-text-secondary'),
+                                    'text-halo-color': getColor('--color-text-halo'),
+                                    'text-halo-width': 1
+                                }
+                            },
+                            {
+                                id: 'place-labels',
+                                type: 'symbol',
+                                source: 'pmtiles-source',
+                                'source-layer': 'place',
+                                layout: {
+                                    'text-field': ['get', 'name:latin'],
+                                    'text-font': ['Noto Sans Regular'],
+                                    'text-size': [
+                                        'match',
+                                        ['get', 'class'],
+                                        'city', 14,
+                                        'town', 12,
+                                        'village', 11,
+                                        10
+                                    ]
+                                },
+                                paint: {
+                                    'text-color': getColor('--color-text'),
+                                    'text-halo-color': getColor('--color-text-halo'),
+                                    'text-halo-width': 2
+                                }
+                            },
+                            {
+                                id: 'water_name',
+                                type: 'symbol',
+                                source: 'pmtiles-source',
+                                'source-layer': 'water_name',
+                                layout: {
+                                    'text-field': ['get', 'name:latin'],
+                                    'text-font': ['Noto Sans Regular'],
+                                    'text-size': 12,
+                                    'text-anchor': 'center'
+                                },
+                                paint: {
+                                    'text-color': getColor('--color-water-text'),
+                                    'text-halo-color': getColor('--color-text-halo'),
+                                    'text-halo-width': 1
+                                }
+                            },
+                            {
+                                id: 'mountain_peak',
+                                type: 'symbol',
+                                source: 'pmtiles-source',
+                                'source-layer': 'mountain_peak',
+                                layout: {
+                                    'text-field': ['get', 'name:latin'],
+                                    'text-font': ['Noto Sans Regular'],
+                                    'text-size': 11,
+                                    'text-anchor': 'top',
+                                    'text-offset': [0, 0.5]
+                                },
+                                paint: {
+                                    'text-color': getColor('--color-mountain-text'),
+                                    'text-halo-color': getColor('--color-text-halo'),
+                                    'text-halo-width': 1
+                                }
+                            },
+                            {
+                                id: 'park',
+                                type: 'fill',
+                                source: 'pmtiles-source',
+                                'source-layer': 'park',
+                                paint: {
+                                    'fill-color': getColor('--color-park'),
+                                    'fill-opacity': 0.7
+                                }
                             }
-                        },
-                        {
-                            id: 'park',
-                            type: 'fill',
-                            source: 'pmtiles-source',
-                            'source-layer': 'park',
-                            paint: {
-                                'fill-color': getColor('--color-park'),
-                                'fill-opacity': 0.7
-                            }
-                        }
-                    ]
+                        ]
                 },
                 center: centerThisFrame,
-                zoom: 5
+                zoom: initZoom
             });
 
             const map = mapRef.current;
@@ -292,6 +325,7 @@ export const Map = ({
             }
 
             map.addControl(new maplibregl.NavigationControl());
+            map.addControl(new maplibregl.FullscreenControl());
 
             // Report map details once after map is loaded
             map.once('load', () => {
@@ -299,14 +333,14 @@ export const Map = ({
                     p.getHeader(),
                     p.getMetadata()
                 ]).then(([header, metadata]) => {
-                    const mapDetails = {
+                    const _mapDetails = {
                         header: header,
                         metadata: metadata,
-                        layers: map.getStyle().layers
+                        layers: map.getStyle().layers,
+                        center: centerThisFrame,
+                        zoom: initZoom
                     };
-                    reportMapDetails(mapDetails);
-                    setMapDetails(mapDetails);
-                    setMapCenter(centerThisFrame);
+                    reportMapDetails(_mapDetails);
                 });
             });
         }).catch(error => {
@@ -319,9 +353,10 @@ export const Map = ({
                 mapRef.current = null;
             }
         };
-    }, []); // Empty dependency array since we're using refs
+    }, [filePath, config]); // Add filePath to dependencies
 
-    // New effect for handling search
+
+    // Handle search
     useEffect(() => {
         if (!mapRef.current || !searchQuery || !reportSearch || !config) return;
 
@@ -485,8 +520,8 @@ export const Map = ({
 
         setTimeout(() => {
             map.flyTo({
-                center: mapCenter,  // Use the state variable
-                zoom: 4.5,
+                center: mapDetails.center,  // Use the state variable
+                zoom: mapDetails.zoom,
                 essential: true,
                 speed: 5,
             });
@@ -500,23 +535,59 @@ export const Map = ({
 
     }, [searchQuery, config]); // Add config to dependencies
 
-    const handleSetCenter = () => {
-        const currentViewCoordinates = mapRef.current.getCenter().toArray();
-        setMapCenter(currentViewCoordinates);
+    // Event listener for live coordinates
+    useEffect(() => {
+        if (!mapRef.current || !reportLive) return;
+
+        const map = mapRef.current;
+
+        const updateCenter = () => {
+            const center = map.getCenter();
+            const point = map.project(center);
+
+            reportLive({
+                point: {
+                    x: Math.round(point.x),
+                    y: Math.round(point.y)
+                },
+                lngLat: {
+                    lng: center.lng.toFixed(4),
+                    lat: center.lat.toFixed(4)
+                },
+                zoom: map.getZoom().toFixed(2)
+            });
+        };
+
+        // Update on any map movement
+        map.on('move', updateCenter);
+        map.on('moveend', updateCenter);
+
+        // Initial report
+        updateCenter();
+
+        // Cleanup
+        return () => {
+            if (map) {
+                map.off('move', updateCenter);
+                map.off('moveend', updateCenter);
+            }
+        };
+    }, [mapRef.current, reportLive]);
+
+
+    // Set as search center
+    const handleSetCenter = async () => {
+        if (!liveDetails || !mapRef.current) return;
+
+        const center = [liveDetails.lngLat.lng, liveDetails.lngLat.lat];
         reportMapDetails({
             ...mapDetails,
-            center: currentViewCoordinates
+            center,
+            zoom: mapRef.current.getZoom()
         });
-    }
+    };
 
-    // Get current coordinates for display
-    const getCurrentCoordinates = () => {
-        if (!mapRef.current) return '';
-        const center = mapRef.current.getCenter();
-        return `[${center.lng.toFixed(4)}, ${center.lat.toFixed(4)}]`;
-    }
-
-    // In your search functionality, replace hardcoded zoom levels with config values
+    // Get zoom level from config
     const getZoomLevel = (layer, featureClass) => {
         if (!config) {
             console.log('Config not loaded yet');
@@ -526,18 +597,18 @@ export const Map = ({
         console.log('Looking up zoom for:', { layer, featureClass });
 
         if (layer === 'place' && config.place && config.place[featureClass]) {
-            const zoom = parseFloat(config.place[featureClass]);
+            const zoom = config.place[featureClass];
             console.log(`Found place zoom level: ${zoom}`);
             return zoom;
         }
 
         if (config.layers && config.layers[layer]) {
-            const zoom = parseFloat(config.layers[layer]);
+            const zoom = config.layers[layer];
             console.log(`Found layer zoom level: ${zoom}`);
             return zoom;
         }
 
-        const defaultZoom = parseFloat(config.default.zoom) || 15;
+        const defaultZoom = config.default.zoom || 15;
         console.log(`Using default zoom: ${defaultZoom}`);
         return defaultZoom;
     };

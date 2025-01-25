@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# install git, docker, docker-compose and pmtiles
+# install git, docker, docker-compose, tilemaker and pmtiles
 sudo apt install git
 sudo apt install docker
 sudo apt install docker-compose
