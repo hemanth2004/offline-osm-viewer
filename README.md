@@ -138,12 +138,6 @@ Without saving the config, the map details, search center, and markers will be l
 </details>
 
 
-<details>
-<summary><h2>Demo</h2></summary>
-https://github.com/user-attachments/assets/9c587a9b-1c1a-4a9f-8656-4e741be785ed
-</details>
+<h2>Demo</h2>
 
-<details>
-<summary><h2>Todo:</h2></summary>
-- Look for ways to get stable (LTSmaybe?) versions of maplibre-gl, pmtiles 
-</details>
+https://github.com/user-attachments/assets/12a9784a-55a3-4b2f-865a-a7d9d2925e87
