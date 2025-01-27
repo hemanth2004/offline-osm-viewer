@@ -1,7 +1,8 @@
 import './Details.css'
 import { useRef } from 'react';
 import PropTypes from 'prop-types';
-import { CodeBlock } from 'react-code-blocks';
+import { CodeBlock, atomOneDark } from 'react-code-blocks';
+import { generateConfig } from '../utils/generateConfigCode';
 
 function Details({
     filePath,
@@ -9,7 +10,8 @@ function Details({
     liveDetails,
     setIsOpen,
     setSearchQuery,
-    latestSearchResult
+    latestSearchResult,
+    config
 }) {
     const searchInputRef = useRef(null);
 
@@ -27,17 +29,8 @@ function Details({
         return filePath.split('.').pop();
     }
 
-    const generateSearchCenterCode = () => {
-        const center = [mapDetails.center[1], mapDetails.center[0]];
-        const code = `[[search_center.perMap]]\nfileName = "${getFileName(filePath)}.${getFileExtension(filePath)}"\nlatitude = ${center[0]}\nlongitude = ${center[1]}\nzoom = ${mapDetails.zoom}`
-        return code;
-    }
 
-    const copySearchCenter = () => {
-        const code = generateSearchCenterCode();
-        navigator.clipboard.writeText(code);
-        return code;
-    }
+
 
     return (
         <div className="map-details">
@@ -60,24 +53,15 @@ function Details({
                                 </ul>
                             </div>
                             <div className='map-stats-static-right'>
-                                <button className='map-stats-static-right-btn' onClick={copySearchCenter}>
-                                    COPY
-                                </button>
                                 <div className='map-stats-static-right-copy'>
-                                    <CodeBlock
-                                        text={generateSearchCenterCode()}
-                                        language="cpp"
-                                        showLineNumbers={true}
-                                        wrapLines
-                                    />
                                 </div>
                             </div>
                         </div>
                         {liveDetails &&
                             <div className='det-live'>
                                 <p>LIVE</p>
-                                <span>{liveDetails?.lngLat?.lng}°E, {liveDetails?.lngLat?.lat}°N</span><br />
-                                <span>Zoom: {liveDetails?.zoom}x</span>
+                                <span>{liveDetails?.lngLat?.lng?.toFixed(4)}°E, {liveDetails?.lngLat?.lat?.toFixed(4)}°N</span><br />
+                                <span>Zoom: {liveDetails?.zoom?.toFixed(2)}x</span>
                             </div>
                         }
                     </div>

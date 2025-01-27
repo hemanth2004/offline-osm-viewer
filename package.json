@@ -11,6 +11,10 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
+    "@mapbox-controls/inspect": "^3.0.0",
+    "@mapbox-controls/ruler": "^3.0.0",
+    "@turf/turf": "^7.2.0",
+    "@watergis/maplibre-gl-terradraw": "^1.0.0",
     "ini": "^5.0.0",
     "json-formatter-js": "^2.5.18",
     "maplibre-gl": "^5.0.1",
@@ -22,7 +26,8 @@
     "react-maplibre": "^1.0.0",
     "react-markdown": "^9.0.3",
     "rehype-raw": "^7.0.0",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "turf": "^3.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

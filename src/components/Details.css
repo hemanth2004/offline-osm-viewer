@@ -219,17 +219,23 @@
     font-family: monospace;
     display: none;
     position: absolute;
-    top: 28px;
-    right: -15px;
+    top: 0px;
+    right: 0px;
     background-color: #f3f3f3;
     border: 1px solid #d7d7d7;
     border-radius: 8px;
     padding: 5px;
     margin-top: 5px;
-    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    box-shadow: rgba(0, 0, 0, 0.4) 0px 8px 20px;
     z-index: 1000;
     min-width: 300px;
     scale: 0.9;
+
+    outline: 3px dashed #939393;
+}
+
+.map-stats-static-right-copy * {
+    font-family: monospace;
 }
 
 .map-stats-static-right-copy p {

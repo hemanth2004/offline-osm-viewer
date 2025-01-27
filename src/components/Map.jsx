@@ -1,11 +1,12 @@
 import '../utils/global-polyfill';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
+import { MaplibreTerradrawControl } from '@watergis/maplibre-gl-terradraw';
 import * as pmtiles from 'pmtiles';
-import TOML from '@iarna/toml';
+import { generateConfig } from '../utils/generateConfigCode';
 import './MapStyles.css'
-import maptilerStyles from '../assets/maptilerStyles.js'
 import 'maplibre-gl/dist/maplibre-gl.css';
+import '@watergis/maplibre-gl-terradraw/dist/maplibre-gl-terradraw.css';
 
 export const Map = ({
     filePath,
@@ -15,25 +16,13 @@ export const Map = ({
     reportLive,
     searchQuery,
     reportSearch,
+    config
 }) => {
-    const [config, setConfig] = useState(null);
     const mapContainer = useRef(null);
+    const [terraDraw, setTerraDraw] = useState(false)
     const mapRef = useRef(null);  // Store map reference
-
-    // Load config.toml at component mount
-    useEffect(() => {
-        fetch('./config.toml')
-            .then(response => response.text())
-            .then(data => {
-                const parsedConfig = TOML.parse(data);
-                if (parsedConfig?.search_center?.use_this) {
-                    if (parsedConfig) {
-                        setConfig(parsedConfig)
-                    }
-                }
-            })
-            .catch(error => console.error('Error loading config.toml:', error));
-    }, [filePath]);
+    // Add a ref to store initial map details
+    const initialMapDetailsRef = useRef(null);
 
     // Initialize map
     useEffect(() => {
@@ -55,11 +44,11 @@ export const Map = ({
             // Set initial map center based on bounds
             let centerThisFrame = [78.9629, 20.5937]
             let calculateCenterAuto = true
-            console.log(config)
+            //console.log(config)
             // Check if we should use saved search center
             if (config?.search_center?.use_this) {
                 const fileName = filePath.split('\\').pop().split('/').pop();
-                console.log(fileName)
+                //console.log(fileName)
                 const savedMap = config.search_center.perMap.find(
                     map => map.fileName === fileName
                 );
@@ -79,7 +68,7 @@ export const Map = ({
             let initZoom = 5
             if (config?.search_center?.use_this) {
                 const fileName = filePath.split('\\').pop().split('/').pop();
-                console.log(fileName)
+                //console.log(fileName)
                 const savedMap = config.search_center.perMap.find(
                     map => map.fileName === fileName
                 );
@@ -316,6 +305,247 @@ export const Map = ({
 
             const map = mapRef.current;
 
+            // Add terra-draw control
+            const draw = new MaplibreTerradrawControl({
+                modes: [
+                    'render',
+                    'point',
+                    'linestring',
+                    'circle',
+                    'angled-rectangle',
+                    'select',
+                    'delete-selection',
+                    'delete'
+                ],
+                open: true,
+                mode: 'render'
+            });
+            setTerraDraw(draw)
+            map.addControl(draw, 'top-right');
+
+            // Add markers from config if they exist
+            map.on('load', () => {
+                // Get current file name
+                const fileName = filePath.split('/').pop();
+                const mapConfig = config?.search_center?.perMap?.find(
+                    map => map.fileName === fileName
+                );
+
+                if (mapConfig?.features) {
+                    console.log('Loading features from config:', mapConfig.features);
+
+                    // Add a source for all features
+                    map.addSource('config-features', {
+                        type: 'geojson',
+                        data: {
+                            type: 'FeatureCollection',
+                            features: [
+                                // Points
+                                ...mapConfig.features.points.map(point => ({
+                                    type: 'Feature',
+                                    geometry: point.geometry,
+                                    properties: { ...point.properties, featureType: 'point' }
+                                })),
+                                // Lines
+                                ...mapConfig.features.lines.map(line => ({
+                                    type: 'Feature',
+                                    geometry: line.geometry,
+                                    properties: { ...line.properties, featureType: 'line' }
+                                })),
+                                // Circles
+                                ...mapConfig.features.circles.map(circle => ({
+                                    type: 'Feature',
+                                    geometry: circle.geometry,
+                                    properties: { ...circle.properties, featureType: 'circle' }
+                                })),
+                                // Rectangles
+                                ...mapConfig.features.rectangles.map(rect => ({
+                                    type: 'Feature',
+                                    geometry: rect.geometry,
+                                    properties: { ...rect.properties, featureType: 'rectangle' }
+                                }))
+                            ]
+                        }
+                    });
+
+                    // Add point layer
+                    map.addLayer({
+                        id: 'config-points',
+                        type: 'circle',
+                        source: 'config-features',
+                        filter: ['==', ['get', 'featureType'], 'point'],
+                        paint: {
+                            'circle-radius': 6,
+                            'circle-color': '#FF0000',
+                            'circle-stroke-width': 2,
+                            'circle-stroke-color': '#FFFFFF'
+                        }
+                    });
+
+                    // Add line layer
+                    map.addLayer({
+                        id: 'config-lines',
+                        type: 'line',
+                        source: 'config-features',
+                        filter: ['==', ['get', 'featureType'], 'line'],
+                        paint: {
+                            'line-color': '#FF0000',
+                            'line-width': 2
+                        }
+                    });
+
+                    // Add polygon layers (for both circles and rectangles)
+                    map.addLayer({
+                        id: 'config-polygons',
+                        type: 'fill',
+                        source: 'config-features',
+                        filter: ['in', ['get', 'featureType'], ['literal', ['circle', 'rectangle']]],
+                        paint: {
+                            'fill-color': '#FF0000',
+                            'fill-opacity': 0.2,
+                            'fill-outline-color': '#FF0000'
+                        }
+                    });
+
+                    // Add polygon outline layer
+                    map.addLayer({
+                        id: 'config-polygon-outlines',
+                        type: 'line',
+                        source: 'config-features',
+                        filter: ['in', ['get', 'featureType'], ['literal', ['circle', 'rectangle']]],
+                        paint: {
+                            'line-color': '#FF0000',
+                            'line-width': 2
+                        }
+                    });
+
+                    // Initialize TerraDraw with the loaded features
+                    if (draw) {
+                        // Convert features to TerraDraw format
+                        mapConfig.features.points.forEach(point => {
+                            draw.addFeature({
+                                type: 'Feature',
+                                geometry: point.geometry,
+                                properties: {
+                                    mode: 'point',
+                                    ...point.properties
+                                }
+                            });
+                        });
+
+                        mapConfig.features.lines.forEach(line => {
+                            draw.addFeature({
+                                type: 'Feature',
+                                geometry: line.geometry,
+                                properties: {
+                                    mode: 'linestring',
+                                    ...line.properties
+                                }
+                            });
+                        });
+
+                        mapConfig.features.circles.forEach(circle => {
+                            draw.addFeature({
+                                type: 'Feature',
+                                geometry: circle.geometry,
+                                properties: {
+                                    mode: 'circle',
+                                    ...circle.properties,
+                                    radiusKilometers: circle.properties.radiusKilometers
+                                }
+                            });
+                        });
+
+                        mapConfig.features.rectangles.forEach(rect => {
+                            draw.addFeature({
+                                type: 'Feature',
+                                geometry: rect.geometry,
+                                properties: {
+                                    mode: 'angled-rectangle',
+                                    ...rect.properties
+                                }
+                            });
+                        });
+
+                        // Remove the MapLibre layers since TerraDraw will handle rendering
+                        ['config-points', 'config-lines', 'config-polygons', 'config-polygon-outlines'].forEach(layerId => {
+                            if (map.getLayer(layerId)) {
+                                map.removeLayer(layerId);
+                            }
+                        });
+
+                        if (map.getSource('config-features')) {
+                            map.removeSource('config-features');
+                        }
+                    }
+                }
+            });
+
+            // Wait for map to load before adding markers
+            map.on('load', () => {
+                // Add markers from config if they exist
+                if (config?.search_center?.perMap) {
+                    const fileName = filePath.split('/').pop();
+                    console.log('Current file:', fileName);
+                    const mapConfig = config.search_center.perMap.find(
+                        map => map.fileName === fileName
+                    );
+                    console.log('Found config:', mapConfig);
+
+                    if (mapConfig?.markers?.points) {
+                        console.log('Adding markers:', mapConfig.markers.points);
+                        // Add a source for markers
+                        map.addSource('config-markers', {
+                            type: 'geojson',
+                            data: {
+                                type: 'FeatureCollection',
+                                features: mapConfig.markers.points.map(point => ({
+                                    type: 'Feature',
+                                    geometry: {
+                                        type: 'Point',
+                                        coordinates: point.latLon
+                                    },
+                                    properties: {
+                                        name: point.name
+                                    }
+                                }))
+                            }
+                        });
+
+                        // Add marker points
+                        map.addLayer({
+                            id: 'config-marker-points',
+                            type: 'circle',
+                            source: 'config-markers',
+                            paint: {
+                                'circle-radius': 6,
+                                'circle-color': '#FF0000',
+                                'circle-stroke-width': 2,
+                                'circle-stroke-color': '#FFFFFF'
+                            }
+                        });
+
+                        // Add marker labels
+                        map.addLayer({
+                            id: 'config-marker-labels',
+                            type: 'symbol',
+                            source: 'config-markers',
+                            layout: {
+                                'text-field': ['get', 'name'],
+                                'text-offset': [0, -1.5],
+                                'text-anchor': 'bottom',
+                                'text-size': 12
+                            },
+                            paint: {
+                                'text-color': '#000000',
+                                'text-halo-color': '#FFFFFF',
+                                'text-halo-width': 2
+                            }
+                        });
+                    }
+                }
+            });
+
             // If bounds are available, fit the map to them
             if (header.bounds) {
                 map.fitBounds([
@@ -326,23 +556,58 @@ export const Map = ({
 
             map.addControl(new maplibregl.NavigationControl());
             map.addControl(new maplibregl.FullscreenControl());
+            // disable map rotation using right click + drag
+            map.dragRotate.disable();
 
-            // Report map details once after map is loaded
+            // disable map rotation using keyboard
+            map.keyboard.disable();
+
+            // disable map rotation using touch rotation gesture
+            map.touchZoomRotate.disableRotation();
+
+            // Set up periodic feature checking after map is loaded
             map.once('load', () => {
                 Promise.all([
                     p.getHeader(),
                     p.getMetadata()
                 ]).then(([header, metadata]) => {
-                    const _mapDetails = {
+                    // Store initial map details in ref
+                    initialMapDetailsRef.current = {
                         header: header,
                         metadata: metadata,
                         layers: map.getStyle().layers,
                         center: centerThisFrame,
-                        zoom: initZoom
+                        zoom: initZoom,
+                        features: {
+                            points: [],
+                            lines: [],
+                            circles: [],
+                            rectangles: []
+                        }
                     };
-                    reportMapDetails(_mapDetails);
+                    // Initial report of map details
+                    reportMapDetails(initialMapDetailsRef.current);
+
+                    return
                 });
             });
+
+            // Add mouse move handler for live details
+            map.on('mousemove', (e) => {
+                reportLive({
+                    lngLat: map.getCenter(),
+                    zoom: map.getZoom(),
+                });
+            });
+
+            // Also report on map move/zoom
+            map.on('move', () => {
+                reportLive({
+                    lngLat: map.getCenter(),
+                    zoom: map.getZoom(),
+                });
+            });
+
         }).catch(error => {
             console.error("Error loading PMTiles:", error);
         });
@@ -354,7 +619,6 @@ export const Map = ({
             }
         };
     }, [filePath, config]); // Add filePath to dependencies
-
 
     // Handle search
     useEffect(() => {
@@ -535,46 +799,6 @@ export const Map = ({
 
     }, [searchQuery, config]); // Add config to dependencies
 
-    // Event listener for live coordinates
-    useEffect(() => {
-        if (!mapRef.current || !reportLive) return;
-
-        const map = mapRef.current;
-
-        const updateCenter = () => {
-            const center = map.getCenter();
-            const point = map.project(center);
-
-            reportLive({
-                point: {
-                    x: Math.round(point.x),
-                    y: Math.round(point.y)
-                },
-                lngLat: {
-                    lng: center.lng.toFixed(4),
-                    lat: center.lat.toFixed(4)
-                },
-                zoom: map.getZoom().toFixed(2)
-            });
-        };
-
-        // Update on any map movement
-        map.on('move', updateCenter);
-        map.on('moveend', updateCenter);
-
-        // Initial report
-        updateCenter();
-
-        // Cleanup
-        return () => {
-            if (map) {
-                map.off('move', updateCenter);
-                map.off('moveend', updateCenter);
-            }
-        };
-    }, [mapRef.current, reportLive]);
-
-
     // Set as search center
     const handleSetCenter = async () => {
         if (!liveDetails || !mapRef.current) return;
@@ -589,29 +813,132 @@ export const Map = ({
 
     // Get zoom level from config
     const getZoomLevel = (layer, featureClass) => {
-        if (!config) {
-            console.log('Config not loaded yet');
+        if (!config?.zoom_levels) {
+            console.log('Config or zoom_levels not loaded yet');
             return 15;
         }
 
         console.log('Looking up zoom for:', { layer, featureClass });
 
-        if (layer === 'place' && config.place && config.place[featureClass]) {
-            const zoom = config.place[featureClass];
+        // Check place-specific zoom levels
+        if (layer === 'place' && config.zoom_levels.place?.[featureClass]) {
+            const zoom = config.zoom_levels.place[featureClass];
             console.log(`Found place zoom level: ${zoom}`);
             return zoom;
         }
 
-        if (config.layers && config.layers[layer]) {
-            const zoom = config.layers[layer];
+        // Check layer-specific zoom levels
+        if (config.zoom_levels.layers?.[layer]) {
+            const zoom = config.zoom_levels.layers[layer];
             console.log(`Found layer zoom level: ${zoom}`);
             return zoom;
         }
 
-        const defaultZoom = config.default.zoom || 15;
+        // Use default zoom if no specific zoom found
+        const defaultZoom = config.zoom_levels.default?.zoom || 15;
         console.log(`Using default zoom: ${defaultZoom}`);
         return defaultZoom;
     };
+
+
+    const copySearchCenter = () => {
+        const code = generateConfig(filePath, mapDetails, config);
+        navigator.clipboard.writeText(code);
+        return code;
+    }
+
+    const handleDeleteDrawnFeatures = () => {
+        if (!mapRef.current || !terraDraw) return;
+
+        const map = mapRef.current;
+
+        // Remove MapLibre layers first (these were added from config)
+        ['config-points', 'config-lines', 'config-polygons', 'config-polygon-outlines'].forEach(layerId => {
+            if (map.getLayer(layerId)) {
+                map.removeLayer(layerId);
+            }
+        });
+
+        // Remove MapLibre source
+        if (map.getSource('config-features')) {
+            map.removeSource('config-features');
+        }
+
+        // Then delete TerraDraw features
+        const features = terraDraw.getFeatures();
+        if (features && features.features) {
+            features.features.forEach(feature => {
+                terraDraw.deleteFeature(feature);
+            });
+        }
+
+        // Update map details with empty features
+        reportMapDetails({
+            ...mapDetails,
+            features: {
+                points: [],
+                lines: [],
+                circles: [],
+                rectangles: []
+            }
+        });
+    };
+
+    // Keep only this one effect for feature checking
+    useEffect(() => {
+        if (!terraDraw) return;
+
+        const checkFeatures = () => {
+            console.log('Checking features, current mapDetails:', mapDetails);
+
+            const result = terraDraw.getFeatures();
+            if (result && result.features) {
+                const featuresCopy = result.features.map(f => ({ ...f }));
+                const organizedFeatures = {
+                    points: featuresCopy
+                        .filter(f => f.geometry.type === 'Point')
+                        .map(f => ({
+                            name: "Point",
+                            geometry: f.geometry,
+                            properties: f.properties
+                        })),
+                    lines: featuresCopy
+                        .filter(f => f.geometry.type === 'LineString')
+                        .map(f => ({
+                            name: "LineString",
+                            geometry: f.geometry,
+                            properties: f.properties
+                        })),
+                    circles: featuresCopy
+                        .filter(f => f.geometry.type === 'Polygon' && f.properties.mode === 'circle')
+                        .map(f => ({
+                            name: "Circle",
+                            geometry: f.geometry,
+                            properties: f.properties
+                        })),
+                    rectangles: featuresCopy
+                        .filter(f => f.geometry.type === 'Polygon' && f.properties.mode === 'angled-rectangle')
+                        .map(f => ({
+                            name: "Rectangle",
+                            geometry: f.geometry,
+                            properties: f.properties
+                        }))
+                };
+
+                console.log('About to update with features:', organizedFeatures);
+
+                reportMapDetails({
+                    ...mapDetails,
+                    features: organizedFeatures
+                });
+            }
+        };
+
+        const intervalId = setInterval(checkFeatures, 2000);
+
+        return () => clearInterval(intervalId);
+    }, [terraDraw, mapDetails, reportMapDetails]);
+
 
     return (
         <>
@@ -623,9 +950,18 @@ export const Map = ({
                 }}
             />
 
-            <button className='map-btn' onClick={handleSetCenter}>
-                Set as search center
-            </button>
+            <div className='map-btn-container'>
+                <button className='map-btn' onClick={copySearchCenter}>
+                    Copy Config
+                </button>
+                <button className='map-btn' onClick={handleDeleteDrawnFeatures}>
+                    Delete Drawn Features
+                </button>
+
+                <button className='map-btn' onClick={handleSetCenter}>
+                    Set as search center
+                </button>
+            </div>
         </>
     );
 };

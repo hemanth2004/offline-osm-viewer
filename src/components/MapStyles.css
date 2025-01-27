@@ -1,17 +1,27 @@
-.map-btn {
+.map-btn-container {
     position: absolute;
-    bottom: 30px;
-    right: 0;
+    bottom: 35px;
+    right: 10px;
     z-index: 200;
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    align-items: flex-end;
+
+    background-color: #e6e6e6;
+    border-radius: 8px;
+    padding: 5px;
+}
+
+.map-btn {
     cursor: pointer;
 
     font-weight: bold;
-    font-size: 14px;
+    font-size: 12px;
     text-transform: uppercase;
     background-color: #ffffff;
-    margin: 10px 10px;
     border-radius: 8px;
-    padding: 10px 10px;
+    padding: 5px 8px;
     outline: none;
     border: 1px solid rgb(180, 180, 180);
 }
@@ -21,4 +31,10 @@
     outline: 3px solid #005eff;
     background-color: #f4f4f4;
     cursor: pointer;
+}
+
+.map-btn-measure {
+    background-color: #ffecec;
+
+    z-index: 1000;
 }

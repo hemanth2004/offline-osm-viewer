@@ -46,4 +46,11 @@ Therefore, in a search query like **p1 > p2 > p3**, if the search center is set 
 Another example where setting a search center is useful is when the the actual part of the map you care about is a very small portion of the larger .pmtiles map you are loading.
 Geofabrik, discussed in the **HOW** section of this guide, provides Singapore, Malaysia and Brunei as a single map file. A Singapore citizen only cares about Singapore, and not Malaysia or Brunei. If they set the search center to Singapore, their searches can be quicker and more accurate.
 
+## Why should I save config regularly?
+
+The config.json file is used to store the map details, search center, and markers of every .pmtiles file you have opened.
+Without saving the config, the map details, search center, and markers will be lost when you restart the app.
+Also because webpages can't write to the specific local files.
+
+
 

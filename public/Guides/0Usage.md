@@ -26,24 +26,21 @@ This button sets the current location and zoom level as the search center. This 
 
 By default, initially, the search center is calculated based on mean of the left-right, top-bottom bounds of the map. (aka "coverage")
 
-You can override this by setting a search center (latitude, longitude, zoom) for your specific map file in the config.toml file. When you click on the 'Set as search center' button, the current search center is only set temporarily for that session. To permanently set the search center, you need to manually edit the config.toml file. 
-
-This can go somewhere below the [search_center] section, in this format.
-
-```
-[[search_center.perMap]]
-fileName = "MAP_FILE_NAME.pmtiles"
-latitude = YOUR_LATITUDE
-longitude = YOUR_LONGITUDE
-zoom = YOUR_ZOOM
-```
-
-
-
-
+You can override this by setting a search center (latitude, longitude, zoom) for your specific map file. When you click on the 'Set as search center' button, the current search center is only set temporarily for that session. To permanently set the search center, you need to click on "copy config" and replace the content in the config.json file with it, or else the search center will be reset to the default when you restart the app.
 
 > Why is searching for a place so weird? Why should I set the search center?
 > Covered in the **WHY** section.
+
+
+### How to set markers?
+You can draw markers/features onto a map by using the panel on the right. You can choose from lines, points, circles, rectangles and draw custom polygons.
+These drawings will stay on your map for the rest of the session, but they will be lost when you restart the app.
+
+To save your markers, you need to click on "copy config" and paste the content in the config.json file.
+
+**Deleting markers:**
+- The delete button on the top-right panel will delete the markers you have drawn in the current session.
+- The markers that have been loaded from the saved config file can be deleted using the button on the bottom-right panel.
 
 
 
