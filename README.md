@@ -8,8 +8,9 @@ It uses the pmtiles format to store maps and render them. This removes the need 
 **This tool was made for the [doomsday-protocol](https://github.com/hemanth2004/doomsday-protocol) project.**
 (https://github.com/hemanth2004/doomsday-protocol)
 
-## Usage
-
+<details>
+<summary><h2>Setup</h2></summary>
+	
 ### How to prep your map data?
 
 1. Browse Geofabrik or any other map data provider and find the map data you want.
@@ -58,9 +59,13 @@ Run the following command in the terminal:
 	npm run dev
 	```
 
+</details>
 
-## Usage
+<details>
+<summary><h2>Usage</h2></summary>
+	
 ### How to search for a place?
+	
 To search for a place, you can type in your search query in the search bar and click on the search button.
 The search query is a list of place names separated by "**>**" character.
 These place names must roughly be in the order of the hierarchy of the place. You will need to know the rough address of the location you are looking for. (recommend reading the **WHY** section too)
@@ -90,9 +95,11 @@ To save your markers, you need to click on "copy config" and paste the content i
 **Deleting markers:**
 - The delete button on the top-right panel will delete the markers you have drawn in the current session.
 - The markers that have been loaded from the saved config file can be deleted using the button on the bottom-right panel.
+</details>
 
-
-## Why
+<details>
+<summary><h2>WhyandFAQ</h2></summary>
+	
 ### Why is searching for a place so weird?
 
 Unlike other map viewers, this one does not use an online map service or a geospatial database.
@@ -128,4 +135,14 @@ Geofabrik, provides Singapore, Malaysia and Brunei as a single map file. A Singa
 ### Why should I save config regularly?
 The config.json file is used to store the map details, search center, and markers of every .pmtiles file you have opened.
 Without saving the config, the map details, search center, and markers will be lost when you restart the app. Also because webpages can't write to the specific local files.
+</details>
 
+
+<details>
+<summary><h2>Demo</h2></summary>
+</details>
+
+<details>
+<summary><h2>Todo:</h2></summary>
+- Look for ways to get stable (LTSmaybe?) versions of maplibre-gl, pmtiles 
+</details>
