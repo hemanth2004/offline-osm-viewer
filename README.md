@@ -140,6 +140,7 @@ Without saving the config, the map details, search center, and markers will be l
 
 <details>
 <summary><h2>Demo</h2></summary>
+https://github.com/user-attachments/assets/9c587a9b-1c1a-4a9f-8656-4e741be785ed
 </details>
 
 <details>
