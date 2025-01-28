@@ -1,12 +1,17 @@
-import '../utils/global-polyfill';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { MaplibreTerradrawControl } from '@watergis/maplibre-gl-terradraw';
 import * as pmtiles from 'pmtiles';
-import { generateConfig } from '../utils/generateConfigCode';
-import './MapStyles.css'
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@watergis/maplibre-gl-terradraw/dist/maplibre-gl-terradraw.css';
+import PropTypes from 'prop-types';
+
+import '../utils/global-polyfill';
+import { generateConfig } from '../utils/generateConfigCode';
+import mapStyle from '../data/mapStyle';
+import './Map.css'
+
+const DEFAULT_CENTER = [78.9629, 20.5937]
 
 export const Map = ({
     filePath,
@@ -18,19 +23,18 @@ export const Map = ({
     reportSearch,
     config
 }) => {
+
     const mapContainer = useRef(null);
     const [terraDraw, setTerraDraw] = useState(false)
     const mapRef = useRef(null);  // Store map reference
-    // Add a ref to store initial map details
+
     const initialMapDetailsRef = useRef(null);
 
-    // Initialize map
+    // Init map
     useEffect(() => {
         if (mapRef.current || !mapContainer.current) return; // Don't reinitialize if map exists or container isn't ready
 
-        // Get CSS variables
-        const style = getComputedStyle(document.documentElement);
-        const getColor = (name) => style.getPropertyValue(name).trim();
+
 
         // Setup PMTiles protocol
         let protocol = new pmtiles.Protocol();
@@ -41,20 +45,21 @@ export const Map = ({
         protocol.add(p);
 
         p.getHeader().then((header) => {
-            // Set initial map center based on bounds
-            let centerThisFrame = [78.9629, 20.5937]
+
+            let centerThisFrame = DEFAULT_CENTER
+            // Based on bounds
             let calculateCenterAuto = true
-            //console.log(config)
-            // Check if we should use saved search center
+
+            // Probably not needed
             if (config?.search_center?.use_this) {
                 const fileName = filePath.split('\\').pop().split('/').pop();
-                //console.log(fileName)
                 const savedMap = config.search_center.perMap.find(
                     map => map.fileName === fileName
                 );
                 if (savedMap) {
                     centerThisFrame = [savedMap.longitude, savedMap.latitude];
-                    calculateCenterAuto = false; // Don't calculate center if we found a saved map
+                    calculateCenterAuto = false; // Don't calculate center if found saved map
+                    // "Found" => perMap entry with the same filename
                 }
             }
 
@@ -68,7 +73,6 @@ export const Map = ({
             let initZoom = 5
             if (config?.search_center?.use_this) {
                 const fileName = filePath.split('\\').pop().split('/').pop();
-                //console.log(fileName)
                 const savedMap = config.search_center.perMap.find(
                     map => map.fileName === fileName
                 );
@@ -80,225 +84,7 @@ export const Map = ({
             // Initialize MapLibre map
             mapRef.current = new maplibregl.Map({
                 container: mapContainer.current,
-                style: {
-                    version: 8,
-                    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-                    sources: {
-                        'pmtiles-source': {
-                            type: 'vector',
-                            url: `pmtiles://${filePath.split('/').pop()}`,
-                            attribution: '© OpenStreetMap contributors'
-                        }
-                    },
-                    layers:
-                        [
-                            {
-                                id: 'background',
-                                type: 'background',
-                                paint: {
-                                    'background-color': getColor('--color-background')
-                                }
-                            },
-                            {
-                                id: 'landcover',
-                                type: 'fill',
-                                source: 'pmtiles-source',
-                                'source-layer': 'landcover',
-                                paint: {
-                                    'fill-color': [
-                                        'match',
-                                        ['get', 'class'],
-                                        'grass', getColor('--color-grass'),
-                                        'wood', getColor('--color-wood'),
-                                        'forest', getColor('--color-forest'),
-                                        'park', getColor('--color-park'),
-                                        getColor('--color-landcover-default')
-                                    ]
-                                }
-                            },
-                            {
-                                id: 'waterway',
-                                type: 'line',
-                                source: 'pmtiles-source',
-                                'source-layer': 'waterway',
-                                paint: {
-                                    'line-color': getColor('--color-water'),
-                                    'line-width': [
-                                        'match',
-                                        ['get', 'class'],
-                                        'river', 1.5,
-                                        1
-                                    ]
-                                }
-                            },
-                            {
-                                id: 'water',
-                                type: 'fill',
-                                source: 'pmtiles-source',
-                                'source-layer': 'water',
-                                paint: {
-                                    'fill-color': getColor('--color-water')
-                                }
-                            },
-                            {
-                                id: 'boundary',
-                                type: 'line',
-                                source: 'pmtiles-source',
-                                'source-layer': 'boundary',
-                                paint: {
-                                    'line-color': getColor('--color-boundary'),
-                                    'line-width': [
-                                        'match',
-                                        ['get', 'admin_level'],
-                                        10, 10,
-                                        4, 1.5,
-                                        1
-                                    ],
-                                    'line-dasharray': [2, 2]
-                                }
-                            },
-                            {
-                                id: 'building',
-                                type: 'fill',
-                                source: 'pmtiles-source',
-                                'source-layer': 'building',
-                                paint: {
-                                    'fill-color': getColor('--color-building'),
-                                    'fill-outline-color': getColor('--color-building-outline')
-                                }
-                            },
-                            {
-                                id: 'transportation_name',
-                                type: 'symbol',
-                                source: 'pmtiles-source',
-                                'source-layer': 'transportation_name',
-                                layout: {
-                                    'text-field': ['get', 'name:latin'],
-                                    'text-font': ['Noto Sans Regular'],
-                                    'text-size': 12,
-                                    'text-anchor': 'center',
-                                    'text-offset': [0, 0]
-                                },
-                                paint: {
-                                    'text-color': getColor('--color-text-secondary'),
-                                    'text-halo-color': getColor('--color-text-halo'),
-                                    'text-halo-width': 1
-                                }
-                            },
-                            {
-                                id: 'roads',
-                                type: 'line',
-                                source: 'pmtiles-source',
-                                'source-layer': 'transportation',
-                                paint: {
-                                    'line-color': [
-                                        'match',
-                                        ['get', 'class'],
-                                        'motorway', getColor('--color-motorway'),
-                                        'trunk', getColor('--color-trunk'),
-                                        'primary', getColor('--color-primary'),
-                                        'secondary', getColor('--color-secondary'),
-                                        getColor('--color-secondary')
-                                    ],
-                                    'line-width': [
-                                        'match',
-                                        ['get', 'class'],
-                                        'motorway', 4,
-                                        'trunk', 3,
-                                        'primary', 2,
-                                        'secondary', 1.5,
-                                        1
-                                    ]
-                                }
-                            },
-                            {
-                                id: 'poi',
-                                type: 'symbol',
-                                source: 'pmtiles-source',
-                                'source-layer': 'poi',
-                                layout: {
-                                    'text-field': ['get', 'name:latin'],
-                                    'text-font': ['Noto Sans Regular'],
-                                    'text-size': 11,
-                                    'text-anchor': 'top',
-                                    'text-offset': [0, 0.5]
-                                },
-                                paint: {
-                                    'text-color': getColor('--color-text-secondary'),
-                                    'text-halo-color': getColor('--color-text-halo'),
-                                    'text-halo-width': 1
-                                }
-                            },
-                            {
-                                id: 'place-labels',
-                                type: 'symbol',
-                                source: 'pmtiles-source',
-                                'source-layer': 'place',
-                                layout: {
-                                    'text-field': ['get', 'name:latin'],
-                                    'text-font': ['Noto Sans Regular'],
-                                    'text-size': [
-                                        'match',
-                                        ['get', 'class'],
-                                        'city', 14,
-                                        'town', 12,
-                                        'village', 11,
-                                        10
-                                    ]
-                                },
-                                paint: {
-                                    'text-color': getColor('--color-text'),
-                                    'text-halo-color': getColor('--color-text-halo'),
-                                    'text-halo-width': 2
-                                }
-                            },
-                            {
-                                id: 'water_name',
-                                type: 'symbol',
-                                source: 'pmtiles-source',
-                                'source-layer': 'water_name',
-                                layout: {
-                                    'text-field': ['get', 'name:latin'],
-                                    'text-font': ['Noto Sans Regular'],
-                                    'text-size': 12,
-                                    'text-anchor': 'center'
-                                },
-                                paint: {
-                                    'text-color': getColor('--color-water-text'),
-                                    'text-halo-color': getColor('--color-text-halo'),
-                                    'text-halo-width': 1
-                                }
-                            },
-                            {
-                                id: 'mountain_peak',
-                                type: 'symbol',
-                                source: 'pmtiles-source',
-                                'source-layer': 'mountain_peak',
-                                layout: {
-                                    'text-field': ['get', 'name:latin'],
-                                    'text-font': ['Noto Sans Regular'],
-                                    'text-size': 11,
-                                    'text-anchor': 'top',
-                                    'text-offset': [0, 0.5]
-                                },
-                                paint: {
-                                    'text-color': getColor('--color-mountain-text'),
-                                    'text-halo-color': getColor('--color-text-halo'),
-                                    'text-halo-width': 1
-                                }
-                            },
-                            {
-                                id: 'park',
-                                type: 'fill',
-                                source: 'pmtiles-source',
-                                'source-layer': 'park',
-                                paint: {
-                                    'fill-color': getColor('--color-park'),
-                                    'fill-opacity': 0.7
-                                }
-                            }
-                        ]
-                },
+                style: mapStyle(filePath),
                 center: centerThisFrame,
                 zoom: initZoom
             });
@@ -325,8 +111,7 @@ export const Map = ({
 
             // Add markers from config if they exist
             map.on('load', () => {
-                // Get current file name
-                const fileName = filePath.split('/').pop();
+                const fileName = filePath.split('\\').pop().split('/').pop();
                 const mapConfig = config?.search_center?.perMap?.find(
                     map => map.fileName === fileName
                 );
@@ -485,7 +270,7 @@ export const Map = ({
             map.on('load', () => {
                 // Add markers from config if they exist
                 if (config?.search_center?.perMap) {
-                    const fileName = filePath.split('/').pop();
+                    const fileName = filePath.split('\\').pop().split('/').pop();
                     console.log('Current file:', fileName);
                     const mapConfig = config.search_center.perMap.find(
                         map => map.fileName === fileName
@@ -593,7 +378,7 @@ export const Map = ({
             });
 
             // Add mouse move handler for live details
-            map.on('mousemove', (e) => {
+            map.on('mousemove', () => {
                 reportLive({
                     lngLat: map.getCenter(),
                     zoom: map.getZoom(),
@@ -618,38 +403,33 @@ export const Map = ({
                 mapRef.current = null;
             }
         };
-    }, [filePath, config]); // Add filePath to dependencies
+    }, [filePath, config]);
 
     // Handle search
     useEffect(() => {
         if (!mapRef.current || !searchQuery || !reportSearch || !config) return;
 
-        // Remove leading '>' characters from the search query
-        searchQuery = searchQuery.trim().replace(/^>+/, '')
+        const tempSearchQuery = searchQuery.trim().replace(/^>+|>+$/g, '')
 
         const map = mapRef.current;
 
-        // Function to perform search
         const performSearch = () => {
             try {
-                // Split search into hierarchical parts
-                const searchParts = searchQuery.split('>').map(part => part.trim());
+                const searchParts = tempSearchQuery.split('>').map(part => part.trim());
                 console.log("Search hierarchy:", searchParts);
 
-                // Function to search for a specific part after moving to previous location
                 const searchNextPart = (partIndex = 0) => {
                     if (partIndex >= searchParts.length) return;
 
                     const currentSearch = searchParts[partIndex];
-                    console.log(`Searching for part ${partIndex + 1}/${searchParts.length}:`, currentSearch);
+                    //console.log(`Searching for part ${partIndex + 1}/${searchParts.length}:`, currentSearch);
 
-                    // Get all available layers from the map style
                     const style = map.getStyle();
                     const symbolLayers = style.layers.filter(layer =>
                         layer.type === 'symbol' && layer.layout && layer.layout['text-field']
                     );
 
-                    // Search through all text-containing layers
+                    // Search in text-containing layers
                     let foundFeature = null;
                     let foundLayer = null;
 
@@ -667,7 +447,6 @@ export const Map = ({
                     }
 
                     if (foundFeature) {
-                        // Preserve ALL properties including internal ones
                         const feature = Object.assign(Object.create(Object.getPrototypeOf(foundFeature)), foundFeature, {
                             sourceLayer: foundLayer
                         });
@@ -738,7 +517,6 @@ export const Map = ({
                                     }
                                 });
                             } else {
-                                // Wait a bit for tiles to load before searching next part
                                 setTimeout(() => {
                                     searchNextPart(partIndex + 1);
                                 }, 500);
@@ -747,7 +525,6 @@ export const Map = ({
                     } else {
                         // If we can't find the current search term
                         if (partIndex > 0) {
-                            // If this isn't the first search term, report the previous successful location
                             reportSearch({
                                 found: true,
                                 location: {
@@ -763,8 +540,7 @@ export const Map = ({
                         } else {
                             // If this is the first search term and it's not found
                             reportSearch({
-                                found: false,
-                                message: `No location found matching "${currentSearch}"`
+                                found: false
                             });
                         }
                     }
@@ -797,7 +573,7 @@ export const Map = ({
             performSearch();
         });
 
-    }, [searchQuery, config]); // Add config to dependencies
+    }, [searchQuery, config]);
 
     // Set as search center
     const handleSetCenter = async () => {
@@ -872,7 +648,6 @@ export const Map = ({
             });
         }
 
-        // Update map details with empty features
         reportMapDetails({
             ...mapDetails,
             features: {
@@ -884,12 +659,11 @@ export const Map = ({
         });
     };
 
-    // Keep only this one effect for feature checking
+    // Check for features
     useEffect(() => {
         if (!terraDraw) return;
 
         const checkFeatures = () => {
-            console.log('Checking features, current mapDetails:', mapDetails);
 
             const result = terraDraw.getFeatures();
             if (result && result.features) {
@@ -924,8 +698,6 @@ export const Map = ({
                             properties: f.properties
                         }))
                 };
-
-                console.log('About to update with features:', organizedFeatures);
 
                 reportMapDetails({
                     ...mapDetails,
@@ -964,6 +736,17 @@ export const Map = ({
             </div>
         </>
     );
+};
+
+Map.propTypes = {
+    filePath: PropTypes.string.isRequired,
+    mapDetails: PropTypes.object,
+    reportMapDetails: PropTypes.func.isRequired,
+    liveDetails: PropTypes.object,
+    reportLive: PropTypes.func.isRequired,
+    searchQuery: PropTypes.string,
+    reportSearch: PropTypes.func.isRequired,
+    config: PropTypes.object
 };
 
 export default Map;

@@ -8,98 +8,99 @@ import { useFileContent } from './hooks/useFileContent';
 // karnataka > bengaluru > uttarahalli > ramanjaneya > chikkalasandra > ramanjenaya nagara park > bata > kidney foundation > carmel school
 // delhi > new delhi > red fort
 // karnataka > mangaluru > baikampady > navagiri nagara > surathkal > NITK main
-// tamil nadu > namakkal > kattipalayam > chettiyampalayam > pokkampalayam > edward memorial > tiruchengodu
 
 function App() {
-  const filePath = "./public/india.pmtiles"
+    // TODO: Make this dynamic
+    // Filepath to the pmtiles file that is opened
+    const filePath = "./public/india.pmtiles"
 
-  const configImport = useFileContent('./public/config.json');
-  const [config, setConfig] = useState({})
+    const configImport = useFileContent('./public/config.json');
+    const [config, setConfig] = useState({})
 
-  const [mapDetails, setMapDetails] = useState({})
-  const [liveDetails, setLiveDetails] = useState({})
+    const [mapDetails, setMapDetails] = useState({})
+    const [liveDetails, setLiveDetails] = useState({})
 
-  const [searchQuery, setSearchQuery] = useState("")
-  const [latestSearchResult, setLatestSearchResult] = useState({})
+    const [searchQuery, setSearchQuery] = useState("")
+    const [latestSearchResult, setLatestSearchResult] = useState({})
 
-  const [isAboutOpen, setIsAboutOpen] = useState(false)
+    const [isAboutOpen, setIsAboutOpen] = useState(false)
 
 
-  const reportMapDetails = (newMapDetails) => {
-    let res = {
-      ...mapDetails,
-      ...newMapDetails
+    const reportMapDetails = (newMapDetails) => {
+        let res = {
+            ...mapDetails,
+            ...newMapDetails
+        }
+
+        // Convert center coordinates to numbers if they're strings
+        if (res.center) {
+            res.center = [
+                Number(res.center[0])?.toFixed(4),
+                Number(res.center[1])?.toFixed(4)
+            ];
+        }
+
+        // Convert zoom to number if it's a string
+        if (res.zoom) {
+            res.zoom = Number(res.zoom)?.toFixed(4);
+        }
+
+        setMapDetails(res)
     }
 
-    // Convert center coordinates to numbers if they're strings
-    if (res.center) {
-      res.center = [
-        Number(res.center[0])?.toFixed(4),
-        Number(res.center[1])?.toFixed(4)
-      ];
+    const reportLive = (live) => {
+        if (live?.lngLat?.lng != liveDetails?.lngLat?.lng || live?.lngLat?.lat != liveDetails?.lngLat?.lat) {
+            setLiveDetails(live)
+        }
     }
 
-    // Convert zoom to number if it's a string
-    if (res.zoom) {
-      res.zoom = Number(res.zoom)?.toFixed(4);
-    }
+    useEffect(() => {
+        if (configImport.content) {
+            try {
+                const parsedConfig = JSON.parse(configImport.content);
+                console.log(parsedConfig)
+                setConfig(parsedConfig);
+            } catch (error) {
+                console.error('Error parsing config.json:', error);
+            }
+        }
+        if (configImport.error) {
+            console.error('Error loading config.json:', configImport.error);
+        }
+    }, [configImport.content, configImport.error]);
 
-    setMapDetails(res)
-  }
+    return (
+        <div className="app">
+            <Details
+                filePath={filePath}
+                mapDetails={mapDetails}
+                liveDetails={liveDetails}
+                setSearchQuery={setSearchQuery}
+                latestSearchResult={latestSearchResult}
+                setIsOpen={setIsAboutOpen}
+            />
 
-  const reportLive = (live) => {
-    if (live?.lngLat?.lng != liveDetails?.lngLat?.lng || live?.lngLat?.lat != liveDetails?.lngLat?.lat) {
-      setLiveDetails(live)
-    }
-  }
+            <Map
+                filePath={filePath}
+                mapDetails={mapDetails}
+                reportMapDetails={reportMapDetails}
 
-  useEffect(() => {
-    if (configImport.content) {
-      try {
-        const parsedConfig = JSON.parse(configImport.content);
-        console.log(parsedConfig)
-        setConfig(parsedConfig);
-      } catch (error) {
-        console.error('Error parsing config.json:', error);
-      }
-    }
-    if (configImport.error) {
-      console.error('Error loading config.json:', configImport.error);
-    }
-  }, [configImport.content, configImport.error]);
+                liveDetails={liveDetails}
+                reportLive={reportLive}
 
-  return (
-    <div className="app">
-      <Details
-        filePath={filePath}
-        mapDetails={mapDetails}
-        liveDetails={liveDetails}
-        setSearchQuery={setSearchQuery}
-        latestSearchResult={latestSearchResult}
-        setIsOpen={setIsAboutOpen}
-      />
+                searchQuery={searchQuery}
+                reportSearch={setLatestSearchResult}
 
-      <Map
-        filePath={filePath}
-        mapDetails={mapDetails}
-        reportMapDetails={reportMapDetails}
+                config={config}
+            />
 
-        liveDetails={liveDetails}
-        reportLive={reportLive}
+            <About
+                isOpen={isAboutOpen}
+                setIsOpen={() => setIsAboutOpen(false)}
+            />
 
-        searchQuery={searchQuery}
-        reportSearch={setLatestSearchResult}
-
-        config={config}
-      />
-
-      <About
-        isOpen={isAboutOpen}
-        setIsOpen={() => setIsAboutOpen(false)}
-      />
-
-    </div>
-  );
+        </div>
+    );
 }
 
 export default App

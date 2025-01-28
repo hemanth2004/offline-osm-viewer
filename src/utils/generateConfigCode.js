@@ -1,5 +1,5 @@
 export const generateConfig = (filePath, mapDetails, config) => {
-    const fileName = filePath.split('/').pop();
+    const fileName = filePath.split('\\').pop().split('/').pop();
     const center = [mapDetails.center[1], mapDetails.center[0]]; // Convert to [lat, lon]
 
     console.log(mapDetails)
