@@ -8,8 +8,12 @@ It uses the pmtiles format to store maps and render them. This removes the need 
 **This tool was made for the [doomsday-protocol](https://github.com/hemanth2004/doomsday-protocol) project.**
 (https://github.com/hemanth2004/doomsday-protocol)
 
-<details>
-<summary><h2>Setup</h2></summary>
+## Demo
+
+https://github.com/user-attachments/assets/12a9784a-55a3-4b2f-865a-a7d9d2925e87
+
+
+## Setup
 	
 ### How to prep your map data?
 
@@ -59,10 +63,9 @@ Run the following command in the terminal:
 	npm run dev
 	```
 
-</details>
 
-<details>
-<summary><h2>Usage</h2></summary>
+
+## Usage
 	
 ### How to search for a place?
 	
@@ -95,10 +98,9 @@ To save your markers, you need to click on "copy config" and paste the content i
 **Deleting markers:**
 - The delete button on the top-right panel will delete the markers you have drawn in the current session.
 - The markers that have been loaded from the saved config file can be deleted using the button on the bottom-right panel.
-</details>
 
-<details>
-<summary><h2>WhyandFAQ</h2></summary>
+
+## WhyandFAQ
 	
 ### Why is searching for a place so weird?
 
@@ -135,9 +137,3 @@ Geofabrik, provides Singapore, Malaysia and Brunei as a single map file. A Singa
 ### Why should I save config regularly?
 The config.json file is used to store the map details, search center, and markers of every .pmtiles file you have opened.
 Without saving the config, the map details, search center, and markers will be lost when you restart the app. Also because webpages can't write to the specific local files.
-</details>
-
-
-<h2>Demo</h2>
-
-https://github.com/user-attachments/assets/12a9784a-55a3-4b2f-865a-a7d9d2925e87
